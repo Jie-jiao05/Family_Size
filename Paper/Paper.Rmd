@@ -1,5 +1,5 @@
 ---
-title: "How Literacy and Age at Marriage Shape Family Size"
+title: "How Literacy and Age at Marriage Shape Family Size in Portugal, 1979"
 subtitle: "A Statis Research Using Poisson Regression Models "
 author: 
   - Shanjie Jiao
@@ -7,7 +7,7 @@ author:
 thanks: "Code and data are available at: https://github.com/Jie-jiao05/Family_Size."
 date: today
 date-format: long
-abstract: "TMD."
+abstract: "TBD."
 format:
   pdf:
     fig-pos: H
@@ -67,3 +67,5 @@ data <- read.csv("~/Family_Size/Data/cleaned_portugal.csv")
 # Conclusion
 
 # Appendix {-}
+
+# References
