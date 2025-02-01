@@ -44,7 +44,6 @@ library(broom.mixed)
 library(modelsummary)
 
 data <- read.csv("~/Family_Size/Data/cleaned_portugal.csv")
-
 ```
 
 # Introduction
@@ -58,7 +57,22 @@ data <- read.csv("~/Family_Size/Data/cleaned_portugal.csv")
 ## Use GLM, possion,   (reason), what is x how to interoperate
 
 # Result
-## Summary table, chart to shw the dataset, use knit kabble
+## Data Description
+This dataset originates from the 1979-80 Portuguese Fertility Survey, conducted as part of the World Fertility Survey (WFS) program and archived by Princeton University’s Office of Population Research (OPR).
+
+The Dataset includes 5,148 observations and 8 variables, covering factors such as literacy, marriage age, pregnancies, children, and regional demographics. @tbl-summary it shows a summary information of our dataset.
+
+```{r}
+#| label: tbl-summary
+#| tbl-cap: Dataset Summary
+#| echo: false
+#| warning: false
+#| message: false
+
+summary_table <-summary(data)
+summary_table 
+```
+
 ## Set up model
 ## Model selection (use model with offset)
 ## Use likelyhood rario test to do the performance ,  to see the efficiency between model
