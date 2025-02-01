@@ -1,0 +1,102 @@
+
+
+Portugal fertility survey 1979
+
+- [More information](https://wfs.dhsprogram.com/index.cfm?ccode=pt)
+- [data source](https://wfs.dhsprogram.com/)
+- [data dictionary](https://wfs.dhsprogram.com/pt/ptsr01.dct)
+
+File `portugal.RData` on the course web site.  Code in `Assignment1.Rmd`
+
+
+```{r dataDownload, include=FALSE}
+pUrl = 'http://wfs.dhsprogram.com/pt/ptsr01.dat'
+pName = file.path(tempdir(), 'portugal.dat')
+if(!file.exists(pName)) {
+  download.file(pUrl, pName)
+}
+
+datNames = rbind(
+		age=c(45,2),
+		ageMarried=c(149,2), 
+		monthsSinceM = c(157,4),
+#		failedPregnancies=c(421,2),
+#		failedPregStill=c(423,2),
+#		failedPregSpAb=c(425,2),
+		pregnancies=c(433,2),
+		children=c(435,2),
+		sons=c(443,2),
+#		firstBirthInterval = c(479,2),
+		region = c(641,2),
+		literacy = c(649,2)
+)
+		colnames(datNames ) = c('start','len')
+		datNames = cbind(startm1=datNames[,1]-1,datNames, sum=apply(datNames, 1,sum))
+		cbind(datNames[-1,1] , datNames[seq(1, nrow(datNames)-1),4])
+		datNames[-1,1] = datNames[-1,2] - datNames[seq(1, nrow(datNames)-1),4]
+		dWidths = as.vector(t(datNames[,c(1,3)]))
+		dNames = paste(rep(rownames(datNames), rep(2, nrow(datNames))),
+  	rep(c( "junk",""), nrow(datNames)), sep="") 
+		
+		dNames = dNames[dWidths > 0]
+		dWidths = dWidths[dWidths > 0]
+		
+		formats = list(
+			ageMarried = data.frame(code=1:7,  label=c(0,15,18,20,22,25,30)),
+			region = data.frame(code=1:5, 
+				label=c('lisbon','porto','20k+', '10-20k', 'lt10k')),
+			literacy = data.frame(code=1:2, label=c('yes','no')),
+			firstBirthInterval = data.frame(
+					code = 1:8,
+					label = c(
+							'lt0','0-7', '8-11','12-23',
+							'24-35','36-47','48-59','60-Inf'
+							)
+					)
+		)
+
+	
+
+		formats$ageMarried$label = 
+  	paste(formats$ageMarried$label, 'to',
+  	c(formats$ageMarried$label[-1], 'Inf'), sep='')
+  	formats$ageMarried = rbind(formats$ageMarried, data.frame(code=88, label='never'))
+
+   
+  portugal = read.fwf(
+    pName,
+    dWidths, col.names=dNames,
+    header=FALSE)
+  
+  portugal = portugal[,grep("junk$", names(portugal), invert=TRUE)]
+
+for(D in intersect(names(portugal), names(formats))){
+  		portugal[[D]] = factor(portugal[[D]],
+  			levels=formats[[D]]$code, 
+				labels=formats[[D]]$label)
+}
+portugal$ageMarried = relevel(portugal$ageMarried, '22to25')
+portugal$region = relevel(portugal$region, 'lt10k')
+
+if(FALSE) save(portugal, file='portugal.RData')
+```
+
+```{r thedata}
+head(portugal)
+table(portugal$region)
+```
+
+Region is `lt10k` rural areas (less than 10,000 people), towns of size 10-20k, 20k+, and the two largest cities (Lisbon and Porto).
+
+
+The Question: 
+
+- How do literacy and age of marriage affect family size?
+- After we account for known explanatory variables, how much variation (if any) is there in birth rates?
+
+Notes: 
+
+- By European standards Portugal is a poor country, and in 1980 it had the same GDP per capita as Mexico.
+- It's well known that families are larger in rural areas (i.e. `region` is a confounder).
+- You should proceed as if an expert in this area has told you that you do not need to consider zero-inflation.  Zero-inflated models do not fit well to this data, probably because birth rates are lower than Fiji, many zeros are expected, and the likelihood is flat.
+
