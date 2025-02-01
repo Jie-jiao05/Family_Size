@@ -1,6 +1,6 @@
 ---
 title: "How Literacy and Age at Marriage Shape Family Size in Portugal, 1979"
-subtitle: "A Statis Research Using Poisson Regression Models "
+subtitle: "A Statistic Research Using Poisson Regression Models "
 author: 
   - Shanjie Jiao
   - Xizi Sun
