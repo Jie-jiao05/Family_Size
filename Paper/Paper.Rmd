@@ -7,7 +7,7 @@ author:
 thanks: "Code and data are available at: https://github.com/Jie-jiao05/Family_Size."
 date: today
 date-format: long
-abstract: "TBD. IDK"
+abstract: "TBD. IDK. Smash Them"
 format:
   pdf:
     fig-pos: H
