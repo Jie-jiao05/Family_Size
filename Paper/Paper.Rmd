@@ -58,7 +58,7 @@ data <- read.csv("~/Family_Size/Data/cleaned_portugal.csv")
 
 # Result
 ## Data Description
-This dataset originates from the 1979-80 Portuguese Fertility Survey, conducted as part of the World Fertility Survey (WFS) program and archived by Princeton University’s Office of Population Research (OPR).
+This dataset originates from the 1979-80 Portuguese Fertility Survey [@PortugalWFS], conducted as part of the World Fertility Survey (WFS) program and archived by Princeton University’s Office of Population Research (OPR).
 
 The Dataset includes 5,148 observations and 8 variables, covering factors such as literacy, marriage age, pregnancies, children, and regional demographics. @tbl-summary it shows a summary information of our dataset.
 
@@ -73,7 +73,30 @@ summary_table <-summary(data)
 summary_table 
 ```
 
-## Set up model
+## Model
+```{r}
+# Load necessary libraries
+library(dplyr)
+library(MASS)
+
+# Read the cleaned dataset
+data <- read.csv("~/Family_Size/Data/cleaned_portugal.csv")
+
+# Ensure monthsSinceM is positive to prevent log(0) errors
+data <- data %>%
+  filter(monthsSinceM > 0) %>%
+  mutate(log_monthsSinceM = log(monthsSinceM))  # Compute log offset
+
+# Fit Poisson regression model with offset
+poisson_model <- glm(children ~ ageMarried + literacy, 
+                     family = poisson(link = "log"), 
+                     offset = log_monthsSinceM, 
+                     data = data)
+
+# Display model summary
+summary(poisson_model)
+
+```
 ## Model selection (use model with offset)
 ## Use likelyhood rario test to do the performance ,  to see the efficiency between model
 ## Test overdispersion
@@ -82,4 +105,6 @@ summary_table
 
 # Appendix {-}
 
-# References
+\newpage
+
+# References {-}
