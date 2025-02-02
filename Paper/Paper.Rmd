@@ -60,9 +60,97 @@ data <- read.csv("~/Family_Size/Data/cleaned_portugal.csv")
 ## Data Description
 This dataset originates from the 1979-80 Portuguese Fertility Survey [@PortugalWFS], conducted as part of the World Fertility Survey (WFS) program and archived by Princeton University’s Office of Population Research (OPR).
 
-The Dataset includes 5,148 observations and 8 variables, covering factors such as literacy, marriage age, pregnancies, children, and regional demographics. @tbl-summary it shows a summary information of our dataset.
+The Dataset includes 5,148 observations and 8 variables, covering factors such as literacy, marriage age, pregnancies, children, and regional demographics. @tbl-summary it shows a statistical summary of our dataset.
 
 To analyze the relationship between family size, literacy, and age at marriage, the variable Literacy was categorized as a dummy variable, assigning values 0 and 1 to illiterate and literate individuals, respectively. The analysis primarily focused on demographic factors, economic influences, and regional differences, aiming to assess their impact on family size. Additionally, an offset variable accounting for the duration of marriage was included to control for varying exposure times.
+
+```{r}
+#| label: fig-dist
+#| fig-cap: Distribution of Key Variable
+#| echo: false
+# Load necessary libraries
+library(ggplot2)
+library(readr)
+library(dplyr)
+library(tidyr)
+library(ggpubr)  # Provides ggarrange() function
+
+# Assuming 'data' is your dataset
+# Convert literacy to a factor for better visualization
+data$literacy <- as.factor(data$literacy)
+
+# Define an extra-small theme for all plots
+tiny_theme <- theme_minimal(base_size = 8) +
+  theme(
+    plot.title = element_text(size = 8, face = "bold"),
+    axis.text.x = element_text(angle = 30, hjust = 1, size = 6),
+    axis.text.y = element_text(size = 6),
+    axis.title = element_text(size = 7)
+  )
+
+# Histogram of Age at Marriage
+p1 <- ggplot(data, aes(x = ageMarried)) +
+  geom_bar(fill = "gray", color = "black", alpha = 0.7) +
+  labs(title = "Distribution of Age at Marriage", x = "Age at Marriage", y = "Count") +
+  tiny_theme
+
+# Histogram of Literacy Levels
+p2 <- ggplot(data, aes(x = literacy)) +
+  geom_bar(fill = "gray", color = "black", alpha = 0.7) +
+  labs(title = "Distribution of Literacy Levels", x = "Literacy (1 = Literate, 0 = Illiterate)", y = "Count") +
+  tiny_theme
+
+# Boxplot: Age at Marriage vs. Number of Children
+p3 <- ggplot(data, aes(x = ageMarried, y = children)) +
+  geom_boxplot(fill = "gray", outlier.color = "red", outlier.shape = 16) +
+  labs(title = "Age at Marriage vs. Number of Children", x = "Age at Marriage", y = "Number of Children") +
+  tiny_theme
+
+# Boxplot: Literacy vs. Number of Children
+p4 <- ggplot(data, aes(x = literacy, y = children)) +
+  geom_boxplot(fill = "gray", outlier.color = "red", outlier.shape = 16) +
+  labs(title = "Literacy vs. Number of Children", x = "Literacy (1 = Literate, 0 = Illiterate)", y = "Number of Children") +
+  tiny_theme
+
+# Ensure dataset is in data frame format
+data <- as.data.frame(data)
+
+# Select only existing region columns dynamically
+region_cols <- intersect(colnames(data), c("region10_20k", "region20k_", "regionlisbon", "regionlt10k", "regionporto"))
+
+# Ensure at least one region column exists before proceeding
+if (length(region_cols) > 0) {
+  region_counts <- data[, region_cols]
+  region_counts <- colSums(region_counts, na.rm = TRUE)
+  region_counts <- data.frame(Region = names(region_counts), Count = region_counts)
+
+  # Barplot of Region Distribution
+  p5 <- ggplot(region_counts, aes(x = Region, y = Count, fill = Region)) +
+    geom_bar(stat = "identity", color = "black", alpha = 0.7) +
+    labs(title = "Distribution of Regions", x = "Region", y = "Count") +
+    tiny_theme +
+    theme(legend.position = "bottom")
+} else {
+  print("No valid region columns found.")
+}
+
+# Arrange all plots in a grid with correct rendering
+if (exists("p5")) {
+  ggarrange(
+    ggarrange(p1, p2, p3, p4, ncol = 2, nrow = 2),
+    p5,
+    ncol = 1,
+    nrow = 2,
+    heights = c(2, 1)  # Adjust the heights as needed
+  )
+} else {
+  ggarrange(p1, p2, p3, p4, ncol = 2, nrow = 2)
+}
+
+
+
+```
+@fig-dist illustrates the distribution of key variables and their relationship with family size. In general, the age of marriage is normally distributed within the range of this dataset, with a slight right skew, and the peak occurs at 22-25. At the same time, the Portuguese have a low level of education, most people come from regionlt10k, and literate people exist only as a very small minority in society. From the box plot of age at marriage and the number of children, we can see that the number of children is inversely proportional to age, and the lower the age of marriage, the higher the number of children. On the contrary, literate women have significantly more children than illiterate women.
 
 ```{r}
 #| label: tbl-summary
