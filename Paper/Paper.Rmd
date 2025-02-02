@@ -62,6 +62,8 @@ This dataset originates from the 1979-80 Portuguese Fertility Survey [@PortugalW
 
 The Dataset includes 5,148 observations and 8 variables, covering factors such as literacy, marriage age, pregnancies, children, and regional demographics. @tbl-summary it shows a summary information of our dataset.
 
+To analyze the relationship between family size, literacy, and age at marriage, the variable Literacy was categorized as a dummy variable, assigning values 0 and 1 to illiterate and literate individuals, respectively. The analysis primarily focused on demographic factors, economic influences, and regional differences, aiming to assess their impact on family size. Additionally, an offset variable accounting for the duration of marriage was included to control for varying exposure times.
+
 ```{r}
 #| label: tbl-summary
 #| tbl-cap: Dataset Summary
@@ -73,28 +75,58 @@ summary_table <-summary(data)
 summary_table 
 ```
 
-## Model
+## Model Selection
+
+
+
+
+
 ```{r}
+#| include: false
+#| warning: false
+#| message: false
 # Load necessary libraries
 library(dplyr)
 library(MASS)
 
-# Read the cleaned dataset
-data <- read.csv("~/Family_Size/Data/cleaned_portugal.csv")
+# Replace zero or negative values in monthsSinceM with a small positive value (e.g., 0.5)
+data$monthsSinceM <- ifelse(data$monthsSinceM <= 0, 0.1, data$monthsSinceM)
 
-# Ensure monthsSinceM is positive to prevent log(0) errors
-data <- data %>%
-  filter(monthsSinceM > 0) %>%
-  mutate(log_monthsSinceM = log(monthsSinceM))  # Compute log offset
+# Convert categorical variables
+data$ageMarried <- as.factor(data$ageMarried)
+data$literacy <- as.factor(data$literacy)
 
-# Fit Poisson regression model with offset
-poisson_model <- glm(children ~ ageMarried + literacy, 
-                     family = poisson(link = "log"), 
-                     offset = log_monthsSinceM, 
-                     data = data)
+# Rename region variables correctly (Replace dots with underscores)
+colnames(data) <- gsub("\\.", "_", colnames(data))
 
-# Display model summary
+# Fit Poisson regression model with offset (log of monthsSinceM)
+poisson_model <- glm(children ~ literacy + ageMarried + region10_20k + 
+                     region20k_ + regionlisbon + regionlt10k + regionporto + 
+                     offset(log(monthsSinceM)), 
+                     family = poisson(link = "log"), data = data)
+
+# Display summary
 summary(poisson_model)
+```
+Our Final model is showing above:
+```{=latex}
+\begin{align}
+\text{children}_i &\sim \text{Poisson}(\lambda_i) \\
+\log(\lambda_i) &= -4.13839 
+    - 0.12906 \cdot \text{literacy}_i  \\
+    &\quad + 0.03536 \cdot \text{ageMarried15to18}_i 
+    + 0.02006 \cdot \text{ageMarried18to20}_i \\
+    &\quad - 0.01574 \cdot \text{ageMarried20to22}_i 
+    - 0.03959 \cdot \text{ageMarried22to25}_i \\
+    &\quad - 0.02093 \cdot \text{ageMarried25to30}_i 
+    - 0.01054 \cdot \text{ageMarried30toInf}_i \\
+    &\quad - 0.06783 \cdot \text{region10\_20k}_i 
+    - 0.20067 \cdot \text{region20k\_}_i \\
+    &\quad - 0.18386 \cdot \text{regionlisbon}_i 
+    + 0.09381 \cdot \text{regionlt10k}_i \\
+    &\quad + \text{NA} \cdot \text{regionporto}_i 
+    + \log(\text{monthsSinceM}_i)
+\end{align}
 
 ```
 ## Model selection (use model with offset)
