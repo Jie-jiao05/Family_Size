@@ -32,6 +32,7 @@ library(palmerpenguins)
 library(maps)
 library(ggplot2)
 library(knitr)
+library(glmmTMB)
 library(arrow)
 library(rstanarm)
 library(plotly)
@@ -154,10 +155,12 @@ print(final_plot)
 
 
 ```
-@fig-dist illustrates the distribution of key variables and their relationship with family size. In general, the age of marriage is normally distributed within the dataset, slightly skewed to the right, with a peak at 22-25 years old. At the same time, the Portuguese have a low level of education, most of them come from the lt10k area, and illiterate people exist only as a minority in society. From the boxplot of the age of marriage and the number of children, we can see that the number of children is inversely proportional to the age. The lower the age of marriage, the more children there are. At the same time, those who are not educated generally have more children.
+@fig-dist illustrates the distribution of key variables and their relationship with family size. In general, the age of marriage is normally distributed within the dataset, slightly skewed to the right, with a peak at 22-25 years old. At the same time, the Portuguese have a low level of education, most of them come from the lt10k area, and illiterate people exist only as a minority in society. From the boxplot of the age of marriage and the number of children, we can see that the number of children is inversely proportional to the age. The lower the age of marriage, the more children there are. At the same time, those who are not educated generally have more children. 
 
-## Model Selection
-For model Selection we consider 3 model under following condition and conduct Log_Likelihood test, AIC, Deviance to make comparision cross model, and comes with our final model.
+But unignorable, the vast majority of samples come from region_lt10k, creating a highly imbalanced data distribution, which may lead to increased variance and potential overdispersion. To account for differences in exposure across groups, we will consider an offset term during model selection, adjusting for variations in time since marriage. Details will be discussed in @sec-mod and @sec-chk.
+
+## Model Selection {#sec-mod}
+For model Selection we consider 3 model under following condition and conduct Log_Likelihood test, AIC, Deviance to make comparison cross model, and comes with our final model. The detailed models are list below. And for the consideration of offset and over-dispersion are shown in @sec-chk
 ```{=latex}
 \textbf{Model 1: Poisson Regression with Offset}
 \begin{align}
@@ -222,13 +225,11 @@ library(kableExtra)  # Optional for better formatting
 
 # Create a data frame with likelihood ratio test results
 lr_test_results <- data.frame(
-  Comparison = c("Model 1 vs Model 2", "Model 1 vs Model 3", "Model 2 vs Model 3", 
-                 "Model 1", "Model 2", "Model 3"),
-  Log_Likelihood = c(-8944.7, -9234.8, -8909.1, -NA, -NA, -NA),
-  Chi_Square = c(71.307, 580.15, 651.45, NA, NA, NA),  # NA for individual models
-  p_Value = c("2.2e-16", "2.2e-16", "2.2e-16", NA, NA, NA),  # NA for models
-  Deviance = c(NA, NA, NA, 5654.313, 4912.803, 6936.059),  # Deviance only for models
-  AIC = c(NA,NA,NA,17913.42, 17842.12, 18493.57 )
+  Comparison = c("Model 1", "Model 2", "Model 3","Model 1 vs Model 2", "Model 1 vs Model 3", "Model 2 vs Model 3" ),
+  Log_Likelihood = c(-8944.7, -8909.1, -9234.8, NA, NA, NA),
+  Chi_Square = c(NA, NA, NA, 71.307, 580.15, 651.45),  # NA for individual models
+  p_Value = c(NA, NA, NA, "2.2e-16", "2.2e-16", "2.2e-16" ),  # NA for models
+  AIC = c(17913.42, 17842.12, 18493.57,NA,NA,NA)
 )
 
 # Display table with better formatting
@@ -288,11 +289,11 @@ summary(model1)
 library(MASS)
 
 # nb regression model, with overdispersion inspect
-model2 <- glm.nb(children ~ literacy + ageMarried_15_18 + ageMarried_18_20 + 
+model2 <- glmmTMB(children ~ literacy + ageMarried_15_18 + ageMarried_18_20 + 
                      ageMarried_22_25 + ageMarried_25_30 + ageMarried_30_plus + 
                      region_10_20k + region_20k_plus + region_lisbon + region_lt10k +
                      offset(log(monthsSinceM)), 
-                 data = model)
+                 data = model, family = nbinom2)
 
 # Display summary
 summary(model2)
@@ -353,17 +354,17 @@ aic_3
 \textbf{Final Model: Model 2: Negative Binomial Regression with offset}
 \begin{align}
 \text{children}_i &\sim \text{Negative Binomial}(\lambda_i, \theta) \\
-\log(\lambda_i) &= -4.143302 
-    - 0.119106 \cdot \text{literacy}_i  \\
-    &\quad + 0.051760 \cdot \text{ageMarried}_{15-18,i} 
-    + 0.034304 \cdot \text{ageMarried}_{18-20,i} \\
-    &\quad - 0.030966 \cdot \text{ageMarried}_{22-25,i} 
-    - 0.014696 \cdot \text{ageMarried}_{25-30,i} \\
-    &\quad - 0.002713 \cdot \text{ageMarried}_{30+,i} 
+\log(\lambda_i) &= -4.14332 
+    - 0.11911 \cdot \text{literacy}_i  \\
+    &\quad + 0.05177 \cdot \text{ageMarried}_{15-18,i} 
+    + 0.03431 \cdot \text{ageMarried}_{18-20,i} \\
+    &\quad - 0.03097 \cdot \text{ageMarried}_{22-25,i} 
+    - 0.01469 \cdot \text{ageMarried}_{25-30,i} \\
+    &\quad - 0.00269 \cdot \text{ageMarried}_{30+,i} 
     - 0.064757 \cdot \text{region}_{10-20k,i} \\
-    &\quad - 0.197944 \cdot \text{region}_{20k+,i} 
-    - 0.179831 \cdot \text{region}_{Lisbon,i} \\
-    &\quad + 0.096595 \cdot \text{region}_{lt10k,i} 
+    &\quad - 0.19794 \cdot \text{region}_{20k+,i} 
+    - 0.17982 \cdot \text{region}_{Lisbon,i} \\
+    &\quad + 0.09661 \cdot \text{region}_{lt10k,i} 
     + \log(\text{monthsSinceM}_i)
 \end{align}
 
@@ -380,71 +381,89 @@ aic_3
 #| echo: false
 #| warning: false
 #| message: false
-# Extract model summary with confidence intervals
-logRateMat <- confint(model2)  # Extract confidence intervals
-model_summary <- summary(model2)$coefficients  # Extract coefficients
 
-# Combine coefficients, exponentiated estimates (est), and confidence intervals
-results_table <- cbind(model_summary, exp(model_summary[,1]), exp(logRateMat))
+
+library(knitr)
+
+# Extract model summary (conditional fixed effects only)
+model_summary <- summary(model2)$coefficients$cond  
+
+# Extract confidence intervals (Wald method)
+logRateMat <- confint(model2, method = "Wald")
+
+# Ensure row names match between model summary and confidence intervals
+logRateMat <- logRateMat[rownames(model_summary), , drop = FALSE]
+
+# Combine: Add exponentiated estimates (Rate Ratios) and confidence intervals
+results_table <- cbind(model_summary, 
+                       RateRatio = exp(model_summary[, "Estimate"]),  # Exponentiated estimates
+                       LowerCI = exp(logRateMat[, 1]), 
+                       UpperCI = exp(logRateMat[, 2]))
 
 # Rename columns for clarity
-colnames(results_table) <- c("Estimate", "Std. Error", "z value", "Pr(>|z|)", "est", "Lower CI", "Upper CI")
+colnames(results_table) <- c("Estimate", "Std. Error", "z value", "Pr(>|z|)", 
+                             "Rate Ratio", "2.5%", "97.5%")
 
-# Display formatted table in R console
-knitr::kable(results_table, digits = 3)
+# Display formatted table
+kable(results_table, digits = 3)
+
+
 ```
+
+
 ## Anova Test of Region, Marry Age and Literacy
-Our research aim to analysis how marry age and literacy will have impact to the size of family cross region, to test that, we conduct anova test. The result are shown in @tbl-anova, from the data we can see but p-value are less than 0.05 so we fail to reject our null hypothesis, which indicate literacy and region are significant to our model.
+Our research aim to analysis how marry age and literacy will have impact to the size of family cross region, to test that, we conduct anova test. The result are shown in @tbl-anova, from the data we can see all p-value are less than 0.05 so we fail to reject our null hypothesis, which indicate literacy and region are significant to our model.
+
 ```{r}
 #| label: tbl-anova
 #| echo: false
 #| message: false
 #| warning: false
 #| tbl-cap: Anova Test Result
-# Load necessary package
-library(knitr)
-
-# Create a data frame for ANOVA test results
+# Corrected ANOVA results table
 anova_results <- data.frame(
-  Comparison = c("Full Model vs No Literacy", "Full Model vs No Region","Full Model vs No Marrage Age"),
+  Comparison = c("Full Model vs No Literacy", 
+                 "Full Model vs No Region", 
+                 "Full Model vs No Marriage Age"),  # Fixed typo in "Marriage Age"
   Chi_Square = c(19.905, 118.89, 748.72),
-  p_Value = c(8.137e-06, "< 2.2e-16", "< 2.2e-16 ")
-
+  p_Value = c("8.137e-06", "2.2e-16", "2.2e-16"),  # Ensure consistent numeric format
+  df = c(1, 4, 4)  # Degrees of freedom should be positive
 )
 
-# Display the table in a formatted way
-kable(anova_results)
+# Display table using knitr for better formatting
+library(knitr)
+kable(anova_results, digits = 3)
 
 ```
 
 ```{r}
 #| include: false
 # Full Model (Negative Binomial)
-full_model <- glm.nb(children ~ literacy + ageMarried_15_18 + ageMarried_18_20 + 
+full_model <- glmmTMB(children ~ literacy + ageMarried_15_18 + ageMarried_18_20 + 
                      ageMarried_22_25 + ageMarried_25_30 + ageMarried_30_plus + 
                      region_10_20k + region_20k_plus + region_lisbon + region_lt10k +
                      offset(log(monthsSinceM)), 
-                     data = model)
+                     data = model, family = nbinom2)
 
 # Model without Literacy
-no_literacy_model <- glm.nb(children ~ ageMarried_15_18 + ageMarried_18_20 + 
+no_literacy_model <- glmmTMB(children ~ ageMarried_15_18 + ageMarried_18_20 + 
                             ageMarried_22_25 + ageMarried_25_30 + ageMarried_30_plus + 
                             region_10_20k + region_20k_plus + region_lisbon + region_lt10k +
                             offset(log(monthsSinceM)), 
-                            data = model)
+                            data = model, family = nbinom2)
 
 # Model without Region
-no_region_model <- glm.nb(children ~ literacy + ageMarried_15_18 + ageMarried_18_20 + 
+no_region_model <- glmmTMB(children ~ literacy + ageMarried_15_18 + ageMarried_18_20 + 
                           ageMarried_22_25 + ageMarried_25_30 + ageMarried_30_plus + 
                           offset(log(monthsSinceM)), 
-                          data = model)
+                          data = model, family = nbinom2)
 
 # Reduced Model (Excludes age at marriage)
-no_marriage_model <- glm.nb(children ~ literacy + 
+no_marriage_model <- glmmTMB(children ~ literacy + 
                             region_10_20k + region_20k_plus + region_lisbon + region_lt10k + 
                             age + offset(log(monthsSinceM)), 
-                            data = model)
-
+                            data = model, family = nbinom2)
+library(lmtest)
 # Perform Likelihood Ratio Test (ANOVA)
 anova_marriage <- lrtest(full_model, no_marriage_model)
 
@@ -466,16 +485,58 @@ print(anova_marriage)
 
 
 # Conclusion
-Our final model focus that both literacy and age at marriage are significant across regional contexts, with age at marriage having the most substantial impact on family size.
+Our final model focus that both literacy and age at marriage are significant to family size across region , with age at marriage having the most substantial impact.
 
-For an illiterate person married between the ages of 0-15, the family size difference between Lisbon and Porto is -0.18. Which indicate the ratio of family sizes between Lisbon and Porto is 0.835, holding other factors constant.
+Using marriage age 0–15 and Porto as reference categories, literate individuals have 11.2% fewer children than illiterate individuals, suggesting that lower education levels are associated with larger family sizes. Additionally, regional disparities are evident, with families in Lisbon having a family size that is 0.835 times that of those in Porto, indicating that less developed regions tend to have larger families.
+Compare to Lisbon and Porto, a literate individual in Lisbon married between 22–25 is expected to have 25.9% fewer children than an illiterate counterpart in Porto. 
 
-Considering the two largest cities in Portugal, Porto and Lisbon: for a literate individual in Lisbon, married between the ages of 22-25, the family size ratio is approximately 0.741 times that of an illiterate individual in Porto, also married between the ages of 22-25. This is calculated by multiplying the effects of literacy (0.888), region (0.835), and age at marriage (0.970). Thus, the combined ratio is approximately 0.741 (i.e., 0.888 × 0.835 × 0.970 = 0.741).
+However, age at marriage does not significantly affect family size, as all p-values for marriage age categories are above 0.05. Suggesting that variations in marriage timing alone do not drive differences in fertility when controlling for literacy and regional factors.
 
-Our finding allign with previous research, education and marrage age will highly impact family size, which arise a issue with [write something related wit our citation].
+Comparing Lisbon and Porto, a literate individual in Lisbon married between 22–25 is expected to have 25.9% fewer children than an illiterate counterpart in Porto, reinforcing the combined impact of education, regional context, and marital timing on fertility outcomes.
 
 # Appendix {-}
+## Over-Dispersion and Offset {#sec-chk}
+our coefficient plot @fig-disp shows that adding an offset (log(monthsSinceM)) reduces the magnitude of estimates (from blue to orange), help to stabilize variance. And Transform into Negative Binomial distribution(green) further refines confidence intervals while preserving coefficient. And the dispersion ratio is 1.24, this suggests a mild overdispersion, making the Negative Binomial model with an offset the a better choice.
+```{r}
+#| include: false
+# Overdispersion check function
+check_overdispersion <- function(model, model_name) {
+  rdf <- df.residual(model)  # Residual degrees of freedom
+  dev <- sum(residuals(model, type = "pearson")^2)  # Pearson residual deviance
+  ratio <- dev / rdf  # Overdispersion ratio
+  
+  cat("\n", model_name, "\n")
+  cat("Residual Deviance:", dev, "\nDegrees of Freedom:", rdf, "\nRatio:", ratio, "\n")
+  
+  if (ratio > 1.5) {
+    cat("⚠️ Overdispersion detected! Consider using Negative Binomial (`nbinom2`).\n")
+  } else {
+    cat("✅ No severe overdispersion detected.\n")
+  }
+}
 
+# Run overdispersion check for both models
+check_overdispersion(model1, "🔵 Model 1 (Poisson WITH Offset)")
+check_overdispersion(model3, "🟠 Model 3 (Poisson WITHOUT Offset)")
+
+```
+
+```{r}
+#| label: fig-disp
+#| fig-cap: Distribution of Key Variable
+#| echo: false
+library(jtools)
+
+# Plot Coefficient Estimates for Poisson Models (With vs. Without Offset)
+plot_summs(model3, model1, model2, omit.coefs = F, 
+           model.names = c("No Offset", "With Offset","With Offset and nbinom2"))
+
+```
 \newpage
 
 # References {-}
+
+
+
+
+
