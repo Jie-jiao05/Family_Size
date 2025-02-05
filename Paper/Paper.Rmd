@@ -155,9 +155,81 @@ print(final_plot)
 
 
 ```
+
 @fig-dist illustrates the distribution of key variables and their relationship with family size. In general, the age of marriage is normally distributed within the dataset, slightly skewed to the right, with a peak at 22-25 years old. At the same time, the Portuguese have a low level of education, most of them come from the lt10k area, and illiterate people exist only as a minority in society. From the boxplot of the age of marriage and the number of children, we can see that the number of children is inversely proportional to the age. The lower the age of marriage, the more children there are. At the same time, those who are not educated generally have more children. 
 
 But unignorable, the vast majority of samples come from region_lt10k, creating a highly imbalanced data distribution, which may lead to increased variance and potential overdispersion. To account for differences in exposure across groups, we will consider an offset term during model selection, adjusting for variations in time since marriage. Details will be discussed in @sec-mod and @sec-chk.
+
+```{r}
+#| label: tbl-anova
+#| echo: false
+#| message: false
+#| warning: false
+#| tbl-cap: Anova Test Result
+# Corrected ANOVA results table
+anova_results <- data.frame(
+  Comparison = c("Full Model vs No Literacy", 
+                 "Full Model vs No Region", 
+                 "Full Model vs No Marriage Age"),  # Fixed typo in "Marriage Age"
+  Chi_Square = c(19.905, 118.89, 748.72),
+  p_Value = c("8.137e-06", "2.2e-16", "2.2e-16"),  # Ensure consistent numeric format
+  df = c(1, 4, 4)  # Degrees of freedom should be positive
+)
+
+# Display table using knitr for better formatting
+library(knitr)
+kable(anova_results, digits = 3)
+
+```
+
+```{r}
+#| include: false
+# Full Model (Negative Binomial)
+full_model <- glmmTMB(children ~ literacy + ageMarried_15_18 + ageMarried_18_20 + 
+                     ageMarried_22_25 + ageMarried_25_30 + ageMarried_30_plus + 
+                     region_10_20k + region_20k_plus + region_lisbon + region_lt10k +
+                     offset(log(monthsSinceM)), 
+                     data = model, family = nbinom2)
+
+# Model without Literacy
+no_literacy_model <- glmmTMB(children ~ ageMarried_15_18 + ageMarried_18_20 + 
+                            ageMarried_22_25 + ageMarried_25_30 + ageMarried_30_plus + 
+                            region_10_20k + region_20k_plus + region_lisbon + region_lt10k +
+                            offset(log(monthsSinceM)), 
+                            data = model, family = nbinom2)
+
+# Model without Region
+no_region_model <- glmmTMB(children ~ literacy + ageMarried_15_18 + ageMarried_18_20 + 
+                          ageMarried_22_25 + ageMarried_25_30 + ageMarried_30_plus + 
+                          offset(log(monthsSinceM)), 
+                          data = model, family = nbinom2)
+
+# Reduced Model (Excludes age at marriage)
+no_marriage_model <- glmmTMB(children ~ literacy + 
+                            region_10_20k + region_20k_plus + region_lisbon + region_lt10k + 
+                            age + offset(log(monthsSinceM)), 
+                            data = model, family = nbinom2)
+library(lmtest)
+# Perform Likelihood Ratio Test (ANOVA)
+anova_marriage <- lrtest(full_model, no_marriage_model)
+
+# Display results
+
+# Compare Full Model vs. Model without Literacy
+anova_literacy <- lrtest(full_model, no_literacy_model)
+
+# Compare Full Model vs. Model without Region
+anova_region <- lrtest(full_model, no_region_model)
+
+# Display Results
+print(anova_literacy)
+print(anova_region)
+print(anova_marriage)
+
+```
+
+## Anova Test of Region, Marry Age and Literacy
+Our research aim to analysis how marry age and literacy will have impact to the size of family cross region, to test that, we conduct anova test. The result are shown in @tbl-anova, from the data we can see all p-value are less than 0.05 so we fail to reject our null hypothesis, which indicate literacy and region are significant to our model.
 
 ## Model Selection {#sec-mod}
 For model Selection we consider 3 model under following condition and conduct Log_Likelihood test, AIC, Deviance to make comparison cross model, and comes with our final model. The detailed models are list below. And for the consideration of offset and over-dispersion are shown in @sec-chk
@@ -238,7 +310,7 @@ kable(lr_test_results, caption = "Likelihood Ratio Test Results", align = "c") %
 
 ```
 
-From @tbl-ly, we observe that, based on the Log-Likelihood test, Model 2 provides the most accurate results as it effectively accounts for both overdispersion and the offset. Additionally, Model 2 has the lowest AIC (17,842.12) and deviance (4,912.803), indicating a better overall fit compared to Models 1 and 3. Therefore, we select Model 2 as our final model.
+From @tbl-ly, we observe that, based on the Log-Likelihood test, Model 2 provides the most accurate results as it effectively accounts for both overdispersion and the offset. Additionally, Model 2 has the lowest AIC (17,842.12), indicating a better overall fit compared to Models 1 and 3. Therefore, we select Model 2 as our final model.
 
 
 
@@ -260,8 +332,12 @@ kable(deviance_results, format = "markdown", align = "Deviance Comparison")
 ```
 
 ## Final Model
-Our final model:model 2 consider over-dispersion with offset is showing below, statistic summary are showing in @tbl-final
+Our final model, Model 2, accounts for over-dispersion with an offset, and its statistical summary is presented in Table @tbl-final. By analyzing the results, we observe that when RegionPorto and Agemarried_0_15 are set as the reference groups, the intercept, literacy, and regional factors (20k+ and Lisbon) are statistically significant.
 
+Using marriage age 0–15 and Porto as reference categories, literate individuals have 11.2% fewer children than illiterate individuals, suggesting that lower education levels are associated with larger family sizes. Additionally, regional disparities are evident, with families in Lisbon having a family size that is 0.835 times that of those in Porto, indicating that less developed regions tend to have larger families.
+Compare to Lisbon and Porto, a literate individual in Lisbon married between 22–25 is expected to have 25.9% fewer children than an illiterate counterpart in Porto. 
+
+Comparing Lisbon and Porto, a literate individual in Lisbon married between 22–25 is expected to have 25.9% fewer children than an illiterate counterpart in Porto, reinforcing the combined impact of education, regional context, and marital timing on fertility outcomes.
 ```{r}
 #| message: false
 #| warning: false
@@ -411,88 +487,17 @@ kable(results_table, digits = 3)
 ```
 
 
-## Anova Test of Region, Marry Age and Literacy
-Our research aim to analysis how marry age and literacy will have impact to the size of family cross region, to test that, we conduct anova test. The result are shown in @tbl-anova, from the data we can see all p-value are less than 0.05 so we fail to reject our null hypothesis, which indicate literacy and region are significant to our model.
 
-```{r}
-#| label: tbl-anova
-#| echo: false
-#| message: false
-#| warning: false
-#| tbl-cap: Anova Test Result
-# Corrected ANOVA results table
-anova_results <- data.frame(
-  Comparison = c("Full Model vs No Literacy", 
-                 "Full Model vs No Region", 
-                 "Full Model vs No Marriage Age"),  # Fixed typo in "Marriage Age"
-  Chi_Square = c(19.905, 118.89, 748.72),
-  p_Value = c("8.137e-06", "2.2e-16", "2.2e-16"),  # Ensure consistent numeric format
-  df = c(1, 4, 4)  # Degrees of freedom should be positive
-)
 
-# Display table using knitr for better formatting
-library(knitr)
-kable(anova_results, digits = 3)
-
-```
-
-```{r}
-#| include: false
-# Full Model (Negative Binomial)
-full_model <- glmmTMB(children ~ literacy + ageMarried_15_18 + ageMarried_18_20 + 
-                     ageMarried_22_25 + ageMarried_25_30 + ageMarried_30_plus + 
-                     region_10_20k + region_20k_plus + region_lisbon + region_lt10k +
-                     offset(log(monthsSinceM)), 
-                     data = model, family = nbinom2)
-
-# Model without Literacy
-no_literacy_model <- glmmTMB(children ~ ageMarried_15_18 + ageMarried_18_20 + 
-                            ageMarried_22_25 + ageMarried_25_30 + ageMarried_30_plus + 
-                            region_10_20k + region_20k_plus + region_lisbon + region_lt10k +
-                            offset(log(monthsSinceM)), 
-                            data = model, family = nbinom2)
-
-# Model without Region
-no_region_model <- glmmTMB(children ~ literacy + ageMarried_15_18 + ageMarried_18_20 + 
-                          ageMarried_22_25 + ageMarried_25_30 + ageMarried_30_plus + 
-                          offset(log(monthsSinceM)), 
-                          data = model, family = nbinom2)
-
-# Reduced Model (Excludes age at marriage)
-no_marriage_model <- glmmTMB(children ~ literacy + 
-                            region_10_20k + region_20k_plus + region_lisbon + region_lt10k + 
-                            age + offset(log(monthsSinceM)), 
-                            data = model, family = nbinom2)
-library(lmtest)
-# Perform Likelihood Ratio Test (ANOVA)
-anova_marriage <- lrtest(full_model, no_marriage_model)
-
-# Display results
-
-# Compare Full Model vs. Model without Literacy
-anova_literacy <- lrtest(full_model, no_literacy_model)
-
-# Compare Full Model vs. Model without Region
-anova_region <- lrtest(full_model, no_region_model)
-
-# Display Results
-print(anova_literacy)
-print(anova_region)
-print(anova_marriage)
-
-```
 
 
 
 # Conclusion
-Our final model focus that both literacy and age at marriage are significant to family size across region , with age at marriage having the most substantial impact.
+Our final model focus that both literacy and age at marriage are significant to family size across region. literacy has the most substantial impact, as it exhibits a strong negative correlation with family size, indicating that higher literacy levels are associated with smaller family sizes. Additionally, from the histogram women who marry between ages 18-20 tend to have larger families. Furthermore, less developed regions are associated with higher family sizes, suggesting that socio-economic factors play a crucial role in family planning and growth patterns.
 
-Using marriage age 0–15 and Porto as reference categories, literate individuals have 11.2% fewer children than illiterate individuals, suggesting that lower education levels are associated with larger family sizes. Additionally, regional disparities are evident, with families in Lisbon having a family size that is 0.835 times that of those in Porto, indicating that less developed regions tend to have larger families.
-Compare to Lisbon and Porto, a literate individual in Lisbon married between 22–25 is expected to have 25.9% fewer children than an illiterate counterpart in Porto. 
+However, age at marriage individually does not significantly affect family size, as all p-values for marriage age categories are above 0.05. Yet, when considering age as a whole, it significantly impacts family size. This suggests that variations in marriage timing alone do not drive fertility differences when controlling for literacy and regional factors. Instead, the combined effect of age at marriage, literacy, and regional differences plays a more critical role in shaping family size.
 
-However, age at marriage does not significantly affect family size, as all p-values for marriage age categories are above 0.05. Suggesting that variations in marriage timing alone do not drive differences in fertility when controlling for literacy and regional factors.
 
-Comparing Lisbon and Porto, a literate individual in Lisbon married between 22–25 is expected to have 25.9% fewer children than an illiterate counterpart in Porto, reinforcing the combined impact of education, regional context, and marital timing on fertility outcomes.
 
 # Appendix {-}
 ## Over-Dispersion and Offset {#sec-chk}
