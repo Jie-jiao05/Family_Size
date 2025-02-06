@@ -48,7 +48,59 @@ origion <-  read_csv("~/Family_Size/Data/portugal.RData")
 data <- read.csv("~/Family_Size/Data/cleaned_portugal.csv")
 model<-read.csv("~/Family_Size/Data/model.csv")
 ```
+```{r}
+#| message: false
+#| warning: false
+#| include: false
+#set model
+library(dplyr)
+library(MASS)
 
+# Poisson regression model, no overdispersion inspect
+model1 <- glm(children ~ literacy + ageMarried_15_18 + ageMarried_18_20 + 
+                     ageMarried_20_22 + ageMarried_22_25 + ageMarried_25_30 + 
+                     ageMarried_30_plus + region_10_20k + region_20k_plus + 
+                     region_lisbon + region_lt10k+ 
+                     offset(log(monthsSinceM)), 
+                     family = poisson(link = "log"), data = model)
+
+summary(model1)
+```
+
+```{r}
+#| include: false
+#| warning: false
+#| message: false
+# Load necessary library
+library(MASS)
+
+# nb regression model, with overdispersion inspect
+model2 <- glmmTMB(children ~ literacy + ageMarried_15_18 + ageMarried_18_20 + 
+                     ageMarried_22_25 + ageMarried_25_30 + ageMarried_30_plus + 
+                     region_10_20k + region_20k_plus + region_lisbon + region_lt10k +
+                     offset(log(monthsSinceM)), 
+                 data = model, family = nbinom2)
+
+# Display summary
+summary(model2)
+
+```
+
+```{r}
+#| include: false
+#| warning: false
+#| message: false
+#| 
+# Poisson regression model, no offset
+model3 <- glm(children ~ literacy + ageMarried_15_18 + ageMarried_18_20 + 
+                     ageMarried_20_22 + ageMarried_22_25 + ageMarried_25_30 + 
+                     ageMarried_30_plus + region_10_20k + region_20k_plus + 
+                     region_lisbon + region_lt10k, 
+                     family = poisson(link = "log"), data = model)
+
+summary(model3)
+
+```
 # Introduction
 ## Why this topic is important
 ## 3 citation relate with our research 
@@ -169,27 +221,7 @@ print(final_plot)
 
 But unignorable, the vast majority of samples come from region_lt10k, creating a highly imbalanced data distribution, which may lead to increased variance and potential overdispersion. To account for differences in exposure across groups, we will consider an offset term during model selection, adjusting for variations in time since marriage. Details will be discussed in @sec-mod and @sec-chk.
 
-```{r}
-#| label: tbl-anova
-#| echo: false
-#| message: false
-#| warning: false
-#| tbl-cap: Anova Test Result
-# Corrected ANOVA results table
-anova_results <- data.frame(
-  Comparison = c("Full Model vs No Literacy", 
-                 "Full Model vs No Region", 
-                 "Full Model vs No Marriage Age"),  # Fixed typo in "Marriage Age"
-  Chi_Square = c(19.905, 118.89, 748.72),
-  p_Value = c("8.137e-06", "2.2e-16", "2.2e-16"),  # Ensure consistent numeric format
-  df = c(1, 4, 4)  # Degrees of freedom should be positive
-)
 
-# Display table using knitr for better formatting
-library(knitr)
-kable(anova_results, digits = 3)
-
-```
 
 ```{r}
 #| include: false
@@ -237,10 +269,60 @@ print(anova_marriage)
 
 ```
 
-## Anova Test of Region, Marry Age and Literacy
-Our research aim to analysis how marry age and literacy will have impact to the size of family cross region, to test that, we conduct anova test. The result are shown in @tbl-anova, from the data we can see all p-value are less than 0.05 so we fail to reject our null hypothesis, which indicate literacy and region are significant to our model.
-
 ## Model Selection {#sec-mod}
+
+
+
+### Anova Test of Region, Marry Age and Literacy
+Our research aims to analyze how marriage age and literacy impact family size across different regions. To achieve this, we use age at marriage, literacy, and region as predictor variables, with children (family size) as the response variable.
+
+To assess the significance of each predictor, we conducted an ANOVA test, and the results are shown in @tbl-ly. The table indicates that all p-values are less than 0.05, allowing us to reject the null hypothesis. This confirms that literacy, marriage age, and region significantly influence family size.
+
+### Over-Dispersion and Offset {#sec-chk}
+In the previous coefficient plot (@fig-dist), the region distribution plot shows that the majority of samples come from region_lt10k, raising concerns about potential overdispersion. To address this issue, we explore two adjustments: adding an offset and transforming the model into a Negative Binomial distribution.
+
+As shown in @fig-disp , incorporating an offset  (log(monthsSinceM)) reduces the magnitude of estimates (from blue to orange), help to stabilize variance. And Transform into Negative Binomial distribution(green) further refines confidence intervals while preserving coefficient. And the dispersion ratio is 1.24, this suggests a mild overdispersion, making the Negative Binomial model with an offset the a better choice.
+
+Therefore, in the following @sec-mod, we will structure our model selection process based on the presence or absence of an offset and whether the model follows a Negative Binomial distribution. This will allow us to evaluate whether incorporating these adjustments improves model performance.
+
+```{r}
+#| include: false
+# Overdispersion check function
+check_overdispersion <- function(model, model_name) {
+  rdf <- df.residual(model)  # Residual degrees of freedom
+  dev <- sum(residuals(model, type = "pearson")^2)  # Pearson residual deviance
+  ratio <- dev / rdf  # Overdispersion ratio
+  
+  cat("\n", model_name, "\n")
+  cat("Residual Deviance:", dev, "\nDegrees of Freedom:", rdf, "\nRatio:", ratio, "\n")
+  
+  if (ratio > 1.5) {
+    cat("⚠️ Overdispersion detected! Consider using Negative Binomial (`nbinom2`).\n")
+  } else {
+    cat("✅ No severe overdispersion detected.\n")
+  }
+}
+
+# Run overdispersion check for both models
+check_overdispersion(model1, "🔵 Model 1 (Poisson WITH Offset)")
+check_overdispersion(model3, "🟠 Model 3 (Poisson WITHOUT Offset)")
+
+```
+
+```{r}
+#| label: fig-disp
+#| fig-cap: Distribution of Key Variable
+#| echo: false
+library(jtools)
+
+# Plot Coefficient Estimates for Poisson Models (With vs. Without Offset)
+plot_summs(model3, model1, model2, omit.coefs = F, 
+           model.names = c("No Offset", "With Offset","With Offset and nbinom2"))
+
+```
+
+
+### Model Setting {#sec-set}
 For model Selection we consider 3 model under following condition and conduct Log_Likelihood test, AIC, Deviance to make comparison cross model, and comes with our final model. The detailed models are list below. And for the consideration of offset and over-dispersion are shown in @sec-chk
 ```{=latex}
 \textbf{Model 1: Poisson Regression with Offset}
@@ -306,11 +388,15 @@ library(kableExtra)  # Optional for better formatting
 
 # Create a data frame with likelihood ratio test results
 lr_test_results <- data.frame(
-  Comparison = c("Model 1", "Model 2", "Model 3","Model 1 vs Model 2", "Model 1 vs Model 3", "Model 2 vs Model 3" ),
-  Log_Likelihood = c(-8944.7, -8909.1, -9234.8, NA, NA, NA),
-  Chi_Square = c(NA, NA, NA, 71.307, 580.15, 651.45),  # NA for individual models
-  p_Value = c(NA, NA, NA, "2.2e-16", "2.2e-16", "2.2e-16" ),  # NA for models
-  AIC = c(17913.42, 17842.12, 18493.57,NA,NA,NA)
+  Comparison = c(
+    "Model 1", "Model 2", "Model 3",
+    "Model 1 vs Model 2", "Model 1 vs Model 3", "Model 2 vs Model 3",
+    "Full Model vs No Literacy", "Full Model vs No Region", "Full Model vs No Marriage Age"
+  ),
+  Log_Likelihood = c(-8944.7, -8909.1, -9234.8, NA, NA, NA,NA,NA,NA),
+  Chi_Square = c(NA, NA, NA, 71.307, 580.15, 651.45,19.905, 118.890,748.720 ),  # NA for individual models
+  p_Value = c(NA, NA, NA, "2.2e-16", "2.2e-16", "2.2e-16" , "8.137e-06","2.2e-16","2.2e-16"),  # NA for models
+  AIC = c(17913.42, 17842.12, 18493.57,NA,NA,NA,NA,NA,NA)
 )
 
 # Display table with better formatting
@@ -320,6 +406,7 @@ kable(lr_test_results, caption = "Likelihood Ratio Test Results", align = "c") %
 ```
 
 From @tbl-ly, we observe that, based on the Log-Likelihood test, Model 2 provides the most accurate results as it effectively accounts for both overdispersion and the offset. Additionally, Model 2 has the lowest AIC (17,842.12), indicating a better overall fit compared to Models 1 and 3. Therefore, we select Model 2 as our final model.
+
 
 
 
@@ -347,59 +434,7 @@ Using marriage age 0–15 and Porto as reference categories, literate individual
 Compare to Lisbon and Porto, a literate individual in Lisbon married between 22–25 is expected to have 25.9% fewer children than an illiterate counterpart in Porto. 
 
 Comparing Lisbon and Porto, a literate individual in Lisbon married between 22–25 is expected to have 25.9% fewer children than an illiterate counterpart in Porto, reinforcing the combined impact of education, regional context, and marital timing on fertility outcomes.
-```{r}
-#| message: false
-#| warning: false
-#| include: false
-#set model
-library(dplyr)
-library(MASS)
 
-# Poisson regression model, no overdispersion inspect
-model1 <- glm(children ~ literacy + ageMarried_15_18 + ageMarried_18_20 + 
-                     ageMarried_20_22 + ageMarried_22_25 + ageMarried_25_30 + 
-                     ageMarried_30_plus + region_10_20k + region_20k_plus + 
-                     region_lisbon + region_lt10k+ 
-                     offset(log(monthsSinceM)), 
-                     family = poisson(link = "log"), data = model)
-
-summary(model1)
-```
-
-```{r}
-#| include: false
-#| warning: false
-#| message: false
-# Load necessary library
-library(MASS)
-
-# nb regression model, with overdispersion inspect
-model2 <- glmmTMB(children ~ literacy + ageMarried_15_18 + ageMarried_18_20 + 
-                     ageMarried_22_25 + ageMarried_25_30 + ageMarried_30_plus + 
-                     region_10_20k + region_20k_plus + region_lisbon + region_lt10k +
-                     offset(log(monthsSinceM)), 
-                 data = model, family = nbinom2)
-
-# Display summary
-summary(model2)
-
-```
-
-```{r}
-#| include: false
-#| warning: false
-#| message: false
-#| 
-# Poisson regression model, no offset
-model3 <- glm(children ~ literacy + ageMarried_15_18 + ageMarried_18_20 + 
-                     ageMarried_20_22 + ageMarried_22_25 + ageMarried_25_30 + 
-                     ageMarried_30_plus + region_10_20k + region_20k_plus + 
-                     region_lisbon + region_lt10k, 
-                     family = poisson(link = "log"), data = model)
-
-summary(model3)
-
-```
 
 ```{r}
 #| include: false
@@ -508,44 +543,7 @@ However, age at marriage individually does not significantly affect family size,
 
 
 
-# Appendix {-}
-## Over-Dispersion and Offset {#sec-chk}
-our coefficient plot @fig-disp shows that adding an offset (log(monthsSinceM)) reduces the magnitude of estimates (from blue to orange), help to stabilize variance. And Transform into Negative Binomial distribution(green) further refines confidence intervals while preserving coefficient. And the dispersion ratio is 1.24, this suggests a mild overdispersion, making the Negative Binomial model with an offset the a better choice.
-```{r}
-#| include: false
-# Overdispersion check function
-check_overdispersion <- function(model, model_name) {
-  rdf <- df.residual(model)  # Residual degrees of freedom
-  dev <- sum(residuals(model, type = "pearson")^2)  # Pearson residual deviance
-  ratio <- dev / rdf  # Overdispersion ratio
-  
-  cat("\n", model_name, "\n")
-  cat("Residual Deviance:", dev, "\nDegrees of Freedom:", rdf, "\nRatio:", ratio, "\n")
-  
-  if (ratio > 1.5) {
-    cat("⚠️ Overdispersion detected! Consider using Negative Binomial (`nbinom2`).\n")
-  } else {
-    cat("✅ No severe overdispersion detected.\n")
-  }
-}
 
-# Run overdispersion check for both models
-check_overdispersion(model1, "🔵 Model 1 (Poisson WITH Offset)")
-check_overdispersion(model3, "🟠 Model 3 (Poisson WITHOUT Offset)")
-
-```
-
-```{r}
-#| label: fig-disp
-#| fig-cap: Distribution of Key Variable
-#| echo: false
-library(jtools)
-
-# Plot Coefficient Estimates for Poisson Models (With vs. Without Offset)
-plot_summs(model3, model1, model2, omit.coefs = F, 
-           model.names = c("No Offset", "With Offset","With Offset and nbinom2"))
-
-```
 \newpage
 
 # References {-}
