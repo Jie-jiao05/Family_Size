@@ -61,7 +61,12 @@ Previous studies provide important background on how education, marriage age, an
 Were a woman's education level and age enough to influence her decisions about childbirth? Did fertility patterns differ significantly across regions? To answer these questions, we will use Generalized Linear Models (GLMs), including Poisson regression and Negative Binomial regression, to analyze how these factors affected family size. This study will not only help us understand Portugal’s fertility transition but also provide new insights into how education, marriage age, and fertility rates are connected on a global scale.
 
 # Method
-## Use GLM, possion,   (reason), what is x how to interoperate
+
+To analyze how literacy and age at marriage influence family size across different regions in Portugal, we employ Generalized Linear Models (GLMs), specifically Poisson regression and Negative Binomial regression. Since family size is a count variable, a Poisson model is a natural choice, assuming the mean and variance of the response variable are equal. However, in cases of overdispersion, where variance exceeds the mean, a Negative Binomial model provides a better fit by incorporating an additional dispersion parameter. To account for differences in exposure time, we include an offset variable representing the number of months since marriage, ensuring that family size is analyzed relative to the duration of marriage.
+
+The model includes three key predictors: literacy (a binary variable indicating whether a woman is literate), age at marriage (categorized into age groups), and region (divided into five categories). Literacy is expected to have a negative effect on family size, as past research suggests that educated women tend to have fewer children. Marriage age is included to test whether early marriage leads to larger families, independent of education. Region is incorporated to examine whether urbanization and access to resources impact fertility patterns, given that prior studies indicate lower birth rates in more developed areas.
+
+To determine the most suitable model, we compare three different specifications: Model 1 – Poisson Regression with an offset, Model 2 – Negative Binomial Regression with an offset, and Model 3 – Poisson Regression without an offset. Model selection is based on AIC, Log-Likelihood Tests, and Deviance Analysis and  we evaluate statistical significance using p-values to assess the impact of each predictor variable. 
 
 # Result
 ## Data Description
