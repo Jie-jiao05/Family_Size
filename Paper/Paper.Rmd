@@ -7,7 +7,6 @@ author:
 thanks: "Code and data are available at: https://github.com/Jie-jiao05/Family_Size."
 date: today
 date-format: long
-abstract: "TBD. IDK. Smash Them"
 format:
   pdf:
     fig-pos: H
@@ -102,11 +101,8 @@ summary(model3)
 
 ```
 # Introduction
-## Why this topic is important
-## 3 citation relate with our research 
-## Our objective, goal, how the citation related to, what we gonna do
-## Brief introduction of our research
-Family size is not just the result of economic or biological factors. On a deeper level, it reflects a person’s upbringing, social and cultural norms, and the uneven development of different regions. Most past studies have focused on how education affects women’s fertility, but they have paid less attention to the role of marriage age and regional differences (such as urban-rural gaps). In a country like Portugal in 1979, which was going through social changes, the interaction between education, marriage age, and urban-rural development could have had a more complex impact on fertility patterns. 
+
+Family size is not just the result of economic factors. On a deeper level, it reflects a person’s upbringing, social and cultural norms, and the uneven development of different regions. Most past studies have focused on how education affects women’s fertility, but they have paid less attention to the role of marriage age and regional differences. In a country like Portugal in 1979, which was going through social changes, the interaction between education and marriage age could have had a more complex impact on fertility patterns across different regions.
 
 Previous studies provide important background on how education, marriage age, and regional differences influence fertility decisions. [@Martin1995] examined fertility patterns in 26 countries and found a negative correlation between women's education levels and fertility rates. This was not only because literacy helped women access contraceptive knowledge but also because education changed how they planned their futures, making it a key variable for study. [@Kabeer1996] highlighted that delaying marriage generally led to fewer children by shortening the reproductive window and allowing women more time for career development. However, the reasons behind later marriage are complex—do women choose to marry later because they have more autonomy, or is it a response to economic conditions? This makes marriage age another important variable to consider. [@Rego2016] studied regional disparities in Portugal and found that urbanization had a major impact on family structure. Cities provided better education and job opportunities, influencing women’s fertility decisions. Their findings suggest that when analyzing fertility choices in Portugal, it is not enough to look at individual factors like education and marriage age—regional differences must also be considered.
 
@@ -114,11 +110,11 @@ Were a woman's education level and age enough to influence her decisions about c
 
 # Method
 
-To analyze how literacy and age at marriage influence family size across different regions in Portugal, we employ Generalized Linear Models (GLMs), specifically Poisson regression and Negative Binomial regression. Since family size is a count variable, a Poisson model is a natural choice, assuming the mean and variance of the response variable are equal. However, in cases of overdispersion, where variance exceeds the mean, a Negative Binomial model provides a better fit by incorporating an additional dispersion parameter. To account for differences in exposure time, we include an offset variable representing the number of months since marriage, ensuring that family size is analyzed relative to the duration of marriage.
+Before model fitting, we processed key categorical variables to ensure their compatibility with regression analysis. Literacy, region, and marriage age were converted into dummy variables, allowing us to include them as predictors in our models. Region was classified into five categories: Lisbon, Porto, areas with populations under 10k (lt10k), areas with populations between 10-20k (10-20k), and areas with populations over 20k (20k+). Marriage age was grouped into discrete categories to analyze its effect on family size. To verify the importance of these variables, we conducted an ANOVA test to assess whether literacy, region, and marriage age significantly influenced family size. Variables with p-values below 0.05 were retained in the model.
 
-The model includes three key predictors: literacy (a binary variable indicating whether a woman is literate), age at marriage (categorized into age groups), and region (divided into five categories). Literacy is expected to have a negative effect on family size, as past research suggests that educated women tend to have fewer children. Marriage age is included to test whether early marriage leads to larger families, independent of education. Region is incorporated to examine whether urbanization and access to resources impact fertility patterns, given that prior studies indicate lower birth rates in more developed areas.
+Since family size is a count variable, we employed Generalized Linear Models (GLMs), specifically Poisson regression and Negative Binomial regression. The Poisson model is a standard choice under the assumption that the mean and variance of the response variable are equal. To ensure an appropriate model fit, we first examine region histograms to identify potential sample size imbalances across different areas. If certain regions have disproportionately large sample sizes, this could contribute to overdispersion in the Poisson model. In such cases, a Negative Binomial model provides a better fit by incorporating an additional dispersion parameter to account for extra variability. We considere to include an offset because marriage duration directly affects the number of children. Without adjustment, individuals with longer marriages may have larger family sizes simply due to a longer reproductive window, leading to biased model estimates. We choose log(monthsSinceMarriage) as the offset because marriage duration is a cumulative variable, and taking the logarithm converts multiplicative relationships into additive ones, making the model more stable and easier to interpret. We then compared Poisson regression without an offset, Poisson regression with an offset, and Negative Binomial regression with an offset to evaluate which specification provided the best fit. 
 
-To determine the most suitable model, we compare three different specifications: Model 1 – Poisson Regression with an offset, Model 2 – Negative Binomial Regression with an offset, and Model 3 – Poisson Regression without an offset. Model selection is based on AIC, Log-Likelihood Tests, and Deviance Analysis and  we evaluate statistical significance using p-values to assess the impact of each predictor variable. 
+To assess model effectiveness, we visualize the Plot Coefficient Estimates graph, which shows the impact of model adjustments on coefficient stability. The final model is selected based on AIC, Log-Likelihood values, and p-values, ensuring the best model fit. We choose the model with the lowest AIC and highest Log-Likelihood as the final specification. Once the final model is determined, we generate a summary table displaying coefficient estimates along with their confidence intervals. Additionally, to improve interpretability, we convert the coefficients into rate ratios, providing a clearer understanding of the effects of literacy, marriage age, and region on family size.
 
 # Result
 ## Data Description
@@ -405,7 +401,7 @@ kable(lr_test_results, caption = "Likelihood Ratio Test Results", align = "c") %
 
 ```
 
-From @tbl-ly, we observe that, based on the Log-Likelihood test, Model 2 provides the most accurate results as it effectively accounts for both overdispersion and the offset. Additionally, Model 2 has the lowest AIC (17,842.12), indicating a better overall fit compared to Models 1 and 3. Therefore, we select Model 2 as our final model.
+From @tbl-ly, we observe that, based on the Log-Likelihood test, Model 2 provides the most accurate results as it effectively accounts for both overdispersion and the offset. Additionally, Model 2 has the lowest AIC (17,842.12) and the biggest Log-Likelihood(-8909.1) , indicating a better overall fit compared to Models 1 and 3. Therefore, we select Model 2 as our final model.
 
 
 
@@ -428,7 +424,7 @@ kable(deviance_results, format = "markdown", align = "Deviance Comparison")
 ```
 
 ## Final Model
-Our final model, Model 2, accounts for over-dispersion with an offset, and its statistical summary is presented in Table @tbl-final. By analyzing the results, we observe that when RegionPorto and Agemarried_0_15 are set as the reference groups, the intercept, literacy, and regional factors (20k+ and Lisbon) are statistically significant.
+Our final model, Model 2, accounts for over-dispersion with an offset, and its statistical summary is presented in  @tbl-final. By analyzing the results, we observe that when RegionPorto and Agemarried_0_15 are set as the reference groups, the intercept, literacy, and regional factors (20k+ and Lisbon) are statistically significant.
 
 Using marriage age 0–15 and Porto as reference categories, literate individuals have 11.2% fewer children than illiterate individuals, suggesting that lower education levels are associated with larger family sizes. Additionally, regional disparities are evident, with families in Lisbon having a family size that is 0.835 times that of those in Porto, indicating that less developed regions tend to have larger families.
 Compare to Lisbon and Porto, a literate individual in Lisbon married between 22–25 is expected to have 25.9% fewer children than an illiterate counterpart in Porto. 
