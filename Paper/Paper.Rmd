@@ -104,13 +104,13 @@ summary(model3)
 
 Family size is not just the result of economic factors. On a deeper level, it reflects a person’s upbringing, social and cultural norms, and the uneven development of different regions. Most past studies have focused on how education affects women’s fertility, but they have paid less attention to the role of marriage age and regional differences. In a country like Portugal in 1979, which was going through social changes, the interaction between education and marriage age could have had a more complex impact on fertility patterns across different regions.
 
-Previous studies provide important background on how education, marriage age, and regional differences influence fertility decisions. [@Martin1995] examined fertility patterns in 26 countries and found a negative correlation between women's education levels and fertility rates. This was not only because literacy helped women access contraceptive knowledge but also because education changed how they planned their futures, making it a key variable for study. [@Kabeer1996] highlighted that delaying marriage generally led to fewer children by shortening the reproductive window and allowing women more time for career development. However, the reasons behind later marriage are complex—do women choose to marry later because they have more autonomy, or is it a response to economic conditions? This makes marriage age another important variable to consider. [@Rego2016] studied regional disparities in Portugal and found that urbanization had a major impact on family structure. Cities provided better education and job opportunities, influencing women’s fertility decisions. Their findings suggest that when analyzing fertility choices in Portugal, it is not enough to look at individual factors like education and marriage age—regional differences must also be considered.
+Previous studies provide important background on how education, marriage age, and regional differences influence fertility decisions. [@Martin1995] found a negative correlation between women's education levels and fertility rates, as education not only improved access to contraceptive knowledge but also influenced life planning.  [@Kabeer1996] highlighted that delaying marriage generally led to fewer children by shortening the reproductive window and allowing women more time for career development. [@Rego2016] studied regional disparities in Portugal and found that urbanization had a major impact on family structure. Their findings suggest that when analyzing fertility choices in Portugal, it is not enough to look at individual factors like education and marriage age—regional differences must also be considered.
 
 Were a woman's education level and age enough to influence her decisions about childbirth? Did fertility patterns differ significantly across regions? To answer these questions, we will use Generalized Linear Models (GLMs), including Poisson regression and Negative Binomial regression, to analyze how these factors affected family size. This study will not only help us understand Portugal’s fertility transition but also provide new insights into how education, marriage age, and fertility rates are connected on a global scale.
 
 # Method
 
-Before model fitting, we processed key categorical variables to ensure their compatibility with regression analysis. Literacy, region, and marriage age were converted into dummy variables, allowing us to include them as predictors in our models. Region was classified into five categories: Lisbon, Porto, areas with populations under 10k (lt10k), areas with populations between 10-20k (10-20k), and areas with populations over 20k (20k+). Marriage age was grouped into discrete categories to analyze its effect on family size. To verify the importance of these variables, we conducted an ANOVA test to assess whether literacy, region, and marriage age significantly influenced family size. Variables with p-values below 0.05 were retained in the model.
+Before model fitting, we converted literacy, region, and marriage age into dummy variables for regression analysis. Literacy was coded as a binary variable (1 = yes, 0 = no). Region was categorized into Lisbon, Porto, and three population-based groups: under 10k, 10-20k, and over 20k. Marriage age was grouped into discrete categories to assess its impact on family size. To determine variable significance, we conducted an ANOVA test, retaining predictors with p-values below 0.05.
 
 Since family size is a count variable, we employed Generalized Linear Models (GLMs), specifically Poisson regression and Negative Binomial regression. The Poisson model is a standard choice under the assumption that the mean and variance of the response variable are equal. To ensure an appropriate model fit, we first examine region histograms to identify potential sample size imbalances across different areas. If certain regions have disproportionately large sample sizes, this could contribute to overdispersion in the Poisson model. In such cases, a Negative Binomial model provides a better fit by incorporating an additional dispersion parameter to account for extra variability. We considere to include an offset because marriage duration directly affects the number of children. Without adjustment, individuals with longer marriages may have larger family sizes simply due to a longer reproductive window, leading to biased model estimates. We choose log(monthsSinceMarriage) as the offset because marriage duration is a cumulative variable, and taking the logarithm converts multiplicative relationships into additive ones, making the model more stable and easier to interpret. We then compared Poisson regression without an offset, Poisson regression with an offset, and Negative Binomial regression with an offset to evaluate which specification provided the best fit. 
 
@@ -122,7 +122,9 @@ This dataset originates from the 1979-80 Portuguese Fertility Survey [@PortugalW
 
 The Dataset includes 5,148 observations and 8 variables, covering factors such as literacy, marriage age, pregnancies, children, and regional demographics. @tbl-summary it shows a statistical summary of our dataset.
 
-To analyze the relationship between family size, literacy, and age at marriage, the variable Literacy was categorized as a dummy variable, assigning values 0 and 1 to illiterate and literate individuals, respectively. The analysis primarily focused on demographic factors, economic influences, and regional differences, aiming to assess their impact on family size. Additionally, an offset variable accounting for the duration of marriage was included to control for varying exposure times.
+@fig-dist illustrates the distribution of key variables and their relationship with family size. In general, the age of marriage is normally distributed within the dataset, slightly skewed to the right, with a peak at 22-25 years old. At the same time, the Portuguese have a low level of education, most of them come from the lt10k area, and illiterate people exist only as a minority in society. From the boxplot of the age of marriage and the number of children, we can see that the number of children is inversely proportional to the age. The lower the age of marriage, the more children there are. At the same time, those who are not educated generally have more children. 
+
+But unignorable, the vast majority of samples come from region_lt10k, creating a highly imbalanced data distribution, which may lead to increased variance and potential overdispersion. To account for differences in exposure across groups, we will consider an offset term during model selection, adjusting for variations in time since marriage. Details will be discussed in @sec-mod and @sec-chk.
 
 ```{r}
 #| label: tbl-summary
@@ -213,9 +215,7 @@ print(final_plot)
 
 ```
 
-@fig-dist illustrates the distribution of key variables and their relationship with family size. In general, the age of marriage is normally distributed within the dataset, slightly skewed to the right, with a peak at 22-25 years old. At the same time, the Portuguese have a low level of education, most of them come from the lt10k area, and illiterate people exist only as a minority in society. From the boxplot of the age of marriage and the number of children, we can see that the number of children is inversely proportional to the age. The lower the age of marriage, the more children there are. At the same time, those who are not educated generally have more children. 
 
-But unignorable, the vast majority of samples come from region_lt10k, creating a highly imbalanced data distribution, which may lead to increased variance and potential overdispersion. To account for differences in exposure across groups, we will consider an offset term during model selection, adjusting for variations in time since marriage. Details will be discussed in @sec-mod and @sec-chk.
 
 
 
@@ -319,7 +319,7 @@ plot_summs(model3, model1, model2, omit.coefs = F,
 
 
 ### Model Setting {#sec-set}
-For model Selection we consider 3 model under following condition and conduct Log_Likelihood test, AIC, Deviance to make comparison cross model, and comes with our final model. The detailed models are list below. And for the consideration of offset and over-dispersion are shown in @sec-chk
+For model Selection we consider 3 model under following condition and conduct Log_Likelihood and AIC to make comparison cross model, and comes with our final model. The detailed models are list below. 
 ```{=latex}
 \textbf{Model 1: Poisson Regression with Offset}
 \begin{align}
@@ -533,10 +533,9 @@ kable(results_table, digits = 3)
 
 
 # Conclusion
-Our final model focus that both literacy and age at marriage are significant to family size across region. literacy has the most substantial impact, as it exhibits a strong negative correlation with family size, indicating that higher literacy levels are associated with smaller family sizes. Additionally, from the histogram women who marry between ages 18-20 tend to have larger families. Furthermore, less developed regions are associated with higher family sizes, suggesting that socio-economic factors play a crucial role in population.
+Our final model focus that both literacy and age at marriage are significant to family size across region. literacy has the most substantial impact, as it exhibits a strong negative correlation with family size, indicating that higher literacy levels are associated with smaller family sizes. Additionally, from the histogram women who marry between ages 18-20 tend to have larger families. Furthermore, less developed regions are associated with higher family sizes, suggesting that socio-economic factors play a crucial role in population. This result aligns with previous findings, which indicate that higher levels of education and socio-economic(region and married age) development contribute to lower family sizes.
 
 However, age at marriage individually does not significantly affect family size, as all p-values for marriage age categories are above 0.05. Yet, when considering age as a whole, it significantly impacts family size. This suggests that variations in marriage timing alone do not drive fertility differences when controlling for literacy and regional factors. Instead, the combined effect of age at marriage, literacy, and regional differences plays a more critical role in shaping family size.
-
 
 
 
